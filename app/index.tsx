@@ -1,149 +1,217 @@
 import InputBar from "@/components/inputBar";
-import { Colors, Theme } from "@/constant/colors";
+import { Theme } from "@/constant/colors";
 import { data } from "@/constant/data/todos";
-import { useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import {
-  Appearance,
-  ColorSchemeName,
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ColorSchemeName,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import AntDesign from "@expo/vector-icons/AntDesign";
+import { Poppins_300Light, useFonts } from "@expo-google-fonts/poppins";
+import { ThemeContext } from "../components/themeContext";
+import Feather from "@expo/vector-icons/Feather";
+import Animated, { LinearTransition } from "react-native-reanimated";
 
 export default function Index() {
-  const [toDos, setToDos] = useState(data.sort((a, b) => a.id - b.id));
-  const [newTodo, setNewTodo] = useState({ title: "", description: "" });
-  const [showComplete, setShowComplete] = useState(true);
-  const colorSchema = Appearance.getColorScheme();
-  const theme = colorSchema === "dark" ? Colors.dark : Colors.light;
-  const styles = indexStyles(theme, colorSchema);
-  const addTodo = () => {
-    if (newTodo.title.trim() && newTodo.description.trim()) {
-      const newId = toDos.length + 1;
-      setToDos([
-        {
-          id: newId,
-          title: newTodo.title,
-          completed: false,
-        },
-        ...toDos,
-      ]);
-      setNewTodo({ title: "", description: "" });
+    const [toDos, setToDos] = useState(data.sort((a, b) => a.id - b.id));
+    const [newTodo, setNewTodo] = useState({ title: "", description: "" });
+    const [showComplete, setShowComplete] = useState(true);
+    // @ts-ignore
+    const { colorSchema, setColorSchema, theme } = useContext(ThemeContext);
+    const styles = indexStyles(theme, colorSchema);
+    const [loaded, error] = useFonts({ Poppins_300Light });
+
+
+    if (!loaded && !error) {
+        return null;
     }
-  };
-  const toggleToDo = (id: number) => {
-    setToDos(
-      toDos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
+    const addTodo = () => {
+        if (newTodo.title.trim()) {
+            const newId = toDos.length + 1;
+            setToDos([
+                {
+                    id: newId,
+                    title: newTodo.title,
+                    description: newTodo.description,
+                    completed: false,
+                },
+                ...toDos,
+            ]);
+            setNewTodo({ title: "", description: "" });
+        }
+    };
+
+    const toggleToDo = (id: number) => {
+        setToDos(
+            toDos.map((todo) =>
+                todo.id === id ? { ...todo, completed: !todo.completed } : todo
+            )
+        );
+    };
+
+    const removeTodo = (id: number) => {
+        setToDos(toDos.filter((todo) => todo.id !== id));
+    };
+    const toggleShowComplete = () => {
+        setShowComplete(!showComplete);
+    };
+
+    const renderItem = ({ item }: { item: any }) => (
+        <View style={styles.todoItem}>
+            <TouchableOpacity onPress={() => toggleToDo(item.id)} style={{ flex: 1 }}>
+                <Text
+                    style={[
+                        item.completed === false ? styles.notCompleted : styles.Completed,
+                        styles.title,
+                        { flexWrap: "wrap" },
+                    ]}
+                    numberOfLines={1} // Prevent truncating title with too many lines
+                    ellipsizeMode="tail" // Add ellipsis if the text overflows
+                >
+                    {item.title}
+                </Text>
+                {item.description && (
+                    <Text
+                        style={[
+                            item.completed === false ? styles.notCompleted : styles.Completed,
+                            styles.description,
+                            { flexWrap: "wrap" },
+                        ]}
+                    >
+                        {item.description}
+                    </Text>
+                )}
+            </TouchableOpacity>
+            <TouchableOpacity
+                onPress={() => removeTodo(item.id)}
+                style={styles.deleteButton}
+            >
+                <AntDesign name="delete" size={28} color="red" />
+            </TouchableOpacity>
+        </View>
     );
-  };
 
-  const removeTodo = (id: number) => {
-    setToDos(toDos.filter((todo) => todo.id !== id));
-  };
-  const toggleShowComplete = () => {
-    setShowComplete(!showComplete);
-  };
-
-  const renderItem = ({ item }: { item: any }) => (
-    <View>
-      {/* <Pressable onPress={() => toggleToDo(item.id)}>
-      </Pressable> */}
-
-      <TouchableOpacity onPress={() => toggleToDo(item.id)}>
-        <Text
-          style={
-            [item.completed === false ? styles.notCompleted : styles.Completed,styles.title]
-          }
-        >
-          {item.title}
-        </Text>
-        <Text
-          style={
-            [item.completed === false ? styles.notCompleted : styles.Completed,styles.description]
-          }
-        >
-          {item.title}
-          {item.description}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  return (
-    <SafeAreaProvider style={[styles.safeArea, { margin: 1 }]}>
-      <View>
-        <InputBar
-          TitlePlc="Title"
-          DescriptionPLc="Description"
-          titleText={newTodo.title}
-          descriptionText={newTodo.description}
-          ChangeTitle={(title: string) => setNewTodo({ ...newTodo, title })}
-          ChangeDescription={(description: string) =>
-            setNewTodo({ ...newTodo, description })
-          }
-          onClick={addTodo}
-        />
-        <TouchableOpacity
-          style={styles.ToggleButton}
-          onPress={toggleShowComplete}
-        >
-          <Text style={styles.toggleText}>
-            {showComplete ? "Hide Completed" : "Show Completed"}
-          </Text>
-        </TouchableOpacity>
-        <FlatList
-          data={
-            showComplete ? toDos : toDos.filter((toDos) => !toDos.completed)
-          }
-          renderItem={renderItem}
-          keyExtractor={(toDo) => toDo.id.toString()}
-        />
-      </View>
-    </SafeAreaProvider>
-  );
+    return (
+        <SafeAreaProvider style={[styles.safeArea, { margin: 1 }]}>
+            <View style={{ flexDirection: "column" }}>
+                <InputBar
+                    TitlePlc="Title"
+                    colorSchema={colorSchema}
+                    DescriptionPLc="Description"
+                    titleText={newTodo.title}
+                    descriptionText={newTodo.description}
+                    ChangeTitle={(title: string) => setNewTodo({ ...newTodo, title })}
+                    ChangeDescription={(description: string) =>
+                        setNewTodo({ ...newTodo, description })
+                    }
+                    onClick={addTodo}
+                />
+                <View style={styles.toggleView}>
+                    {/* Hide and show completed todo's */}
+                    <TouchableOpacity
+                        style={[styles.ToggleButton]}
+                        onPress={toggleShowComplete}
+                    >
+                        <Text style={styles.toggleText}>
+                            {showComplete ? "Hide Completed" : "Show Completed"}
+                        </Text>
+                    </TouchableOpacity>
+                    {/* theme icon */}
+                    <TouchableOpacity
+                        style={{ flexGrow: 2 }}
+                        onPress={() =>
+                            setColorSchema(colorSchema === "dark" ? "light" : "dark")
+                        }
+                    >
+                        <Feather
+                            name={colorSchema === "dark" ? "moon" : "sun"}
+                            size={32}
+                            color="black"
+                        />
+                    </TouchableOpacity>
+                </View>
+                {/* displays the list */}
+                <Animated.FlatList
+                    itemLayoutAnimation={LinearTransition}
+                    keyboardDismissMode="on-drag"
+                    data={
+                        showComplete ? toDos : toDos.filter((toDos) => !toDos.completed)
+                    }
+                    renderItem={renderItem}
+                    keyExtractor={(toDo) => toDo.id.toString()}
+                />
+            </View>
+        </SafeAreaProvider>
+    );
 }
-
-// --------------------------------Styles--------------------------------
-
+//                                  --------------------------------Styles--------------------------------
 const indexStyles = (them: Theme, colorSchema: ColorSchemeName) => {
-  return StyleSheet.create({
-    safeArea: {
-      backgroundColor: them.background,
-    },
-    title:{
-      fontSize: 18
-    },
-    description:{
-      fontSize:15
-    },
-    Completed: {
-      textDecorationLine: "line-through",
-      color: colorSchema === "dark" ? "lightgray" : "gray",
-    },
-    notCompleted: {
-      color: them.text,
-    },
-    ToggleButton: {
-      width: "100%",
-      maxWidth: "75%",
-      backgroundColor: "dodgerblue",
-      borderRadius: 8,
-      justifyContent: "center",
-      alignSelf: "center",
-    },
-    toggleText: {
-      height: 30,
-      alignContent: "center",
-      justifyContent: "center",
-      color: "white",
-      textAlign: "center",
-      fontSize: 18,
-      fontWeight: "500",
-    },
-  });
+    return StyleSheet.create({
+        safeArea: {
+            backgroundColor: them.background,
+        },
+        title: {
+            fontSize: 18,
+            fontFamily: "Poppins_300Light",
+        },
+        description: {
+            fontSize: 15,
+            fontFamily: "Poppins_300Light",
+        },
+        Completed: {
+            textDecorationLine: "line-through",
+            color: colorSchema === "dark" ? "lightgray" : "gray",
+            fontFamily: "Poppins_300Light",
+        },
+        notCompleted: {
+            color: them.text,
+            fontFamily: "Poppins_300Light",
+        },
+        toggleView: {
+            flexDirection: "row",
+            justifyContent: "center",
+            gap: 10,
+        },
+        ToggleButton: {
+            //   width: "75%",
+            //   maxWidth: "100%",
+            flexGrow: 28,
+            backgroundColor: "dodgerblue",
+            borderRadius: 8,
+            justifyContent: "center",
+            alignSelf: "center",
+            fontFamily: "Poppins_300Light",
+        },
+        toggleText: {
+            height: 30,
+            alignContent: "center",
+            justifyContent: "center",
+            color: "white",
+            textAlign: "center",
+            fontSize: 18,
+            fontWeight: "500",
+            fontFamily: "Poppins_300Light",
+        },
+        todoItem: {
+            flexDirection: "row", // Changed to column direction to allow text to stack
+            alignItems: "center", // Align text to the start
+            justifyContent: "space-between",
+            paddingVertical: 10,
+            gap: 10,
+            borderRadius: 5,
+            borderWidth: 2,
+            borderColor: them.tint,
+            width: "100%", // Ensure it takes full width
+        },
+        deleteButton: {
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+        },
+    });
 };
